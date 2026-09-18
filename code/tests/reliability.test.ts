@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { Chess } from "chess.js";
 import { appendRunEvent, createRun, readRun } from "../src/lib/run-store";
 import { HttpRunLogger, type RunState } from "../src/lib/run-types";
+import { evaluationPresentation, parseEvaluation } from "../src/lib/evaluation";
 
 const state: RunState = {
   phase: "playing",
@@ -17,6 +18,44 @@ const state: RunState = {
   error: null,
   evaluation: null,
 };
+
+test("evaluation rail retains the last score during a move, labels it stale, and clears on reset", () => {
+  const chess = new Chess();
+  const evaluation = parseEvaluation(
+    "info depth 16 score cp -650",
+    chess.fen(),
+  )!;
+  const game = {
+    evaluation,
+    fen: chess.fen(),
+    analyzing: false,
+    evaluationError: null,
+  };
+  const before = evaluationPresentation(game, "Jev");
+  chess.move("e4");
+  const pending = evaluationPresentation(
+    { ...game, fen: chess.fen(), analyzing: true },
+    "Jev",
+  );
+  assert.equal(pending.share, before.share);
+  assert.equal(pending.score, "-6.50");
+  assert.equal(pending.stale, true);
+  assert.match(pending.label, /Previous position.*updating/);
+  const after = evaluationPresentation(
+    {
+      ...game,
+      fen: chess.fen(),
+      evaluation: { ...evaluation, fen: chess.fen(), cp: -700 },
+    },
+    "Jev",
+  );
+  assert.equal(after.stale, false);
+  assert.equal(after.score, "-7.00");
+  assert.equal(
+    evaluationPresentation({ ...game, evaluation: null }, "Jev").score,
+    "—",
+  );
+});
 
 test("temporary Windows replacement locks retry the same pending log without losing events", async (t) => {
   const directory = await fs.mkdtemp(join(tmpdir(), "jev-replace-"));
