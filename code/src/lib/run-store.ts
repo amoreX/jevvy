@@ -8,6 +8,7 @@ import { EngineError } from "./native-stockfish";
 import type { RunLog, RunEvent, RunSummary, RunState } from "./run-types";
 import { runProvider } from "./run-types";
 import { withRunCosts, summarizeCosts } from "./run-costs";
+import { LOOKAHEAD_SETTINGS } from "./lookahead";
 
 const globalStore = globalThis as typeof globalThis & {
   chessRunWrites?: Map<string, Promise<unknown>>;
@@ -31,12 +32,44 @@ async function write(log: RunLog) {
   await writeFile(temp, JSON.stringify(withRunCosts(log), null, 2) + "\n", {
     mode: 0o600,
   });
-  await rename(temp, target);
+  // Windows readers/antivirus can briefly deny replacing an existing file.
+  // Retry the same complete temp file while the per-run write queue stays locked.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await rename(temp, target);
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code ?? "unknown";
+      if (
+        ["EPERM", "EACCES", "EBUSY", "EAGAIN", "EIO"].includes(code) &&
+        attempt < 3
+      ) {
+        await sleep([50, 150, 500][attempt]);
+        continue;
+      }
+      // Keep the complete temp file for recovery; do not expose paths or contents.
+      console.error("Run log replacement failed", {
+        runId: log.id,
+        code,
+        attempts: attempt + 1,
+      });
+      throw new EngineError(
+        "Could not save the run log after file replacement failed. Retry to continue.",
+        503,
+      );
+    }
+  }
 }
 export async function createRun(
   model: PlayerId,
   initialFen: string,
+  lookahead = false,
 ): Promise<RunLog> {
+  if (typeof lookahead !== "boolean" || (lookahead && model !== "jev"))
+    throw new EngineError(
+      "Stockfish lookahead is available for Jev only.",
+      400,
+    );
   let fen: string;
   try {
     fen = new Chess(initialFen).fen();
@@ -46,6 +79,7 @@ export async function createRun(
   const log: RunLog = {
     id: randomUUID(),
     version: 1,
+    lookahead: lookahead ? { ...LOOKAHEAD_SETTINGS } : null,
     model,
     modelId: MODELS[model].id,
     provider: MODELS[model].provider,
@@ -121,6 +155,7 @@ export function summarizeRun(log: RunLog): RunSummary {
   return {
     id: log.id,
     model: log.model,
+    lookahead: log.lookahead ?? null,
     reasoning: log.reasoning,
     provider: runProvider(log),
     startedAt: log.startedAt,

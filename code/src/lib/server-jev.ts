@@ -86,8 +86,9 @@ let activeRequests = 0;
 export async function chooseJevMove(
   input: unknown,
   signal: AbortSignal,
+  preparedPayload?: ReturnType<typeof createDecisionRequest>,
 ): Promise<JevDecision> {
-  const payload = createDecisionRequest(input);
+  const payload = preparedPayload ?? createDecisionRequest(input);
   const key = process.env.OPENROUTER_API_KEY?.trim();
   if (!key)
     throw new EngineError(

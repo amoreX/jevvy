@@ -28,6 +28,33 @@ This is a local experiment. The provider route spends the server's provider cred
 
 ## Watching and controlling a game
 
+### Optional Jev lookahead
+
+Select Jev and enable **Stockfish lookahead** before starting a game to attach predicted continuations and concrete consequences to every legal move. The switch defaults to Off and is locked for the game, including pause/resume and undo; choose New game to change it. Other models do not use this mode.
+
+The server runs a separate Stockfish 19 MultiPV search at skill 20, one thread, 16 MB hash, depth capped at 16 and a total search budget of 3 seconds. It uses the latest complete iteration covering every legal move and preserves the original legal-choice ordering. Actual depth depends on the position and machine. Each choice includes up to six plies (including the candidate move), the resulting FEN, captures, promotions, castling, checks, and any rule-based terminal result reached. Lines are validated and replayed with the full game history. These are predicted best-play lines; the Club-strength opponent may choose differently.
+
+No engine score, ranking, win probability, or recommended move is sent to Jev. The engine search can examine further than the displayed six plies. This is still engine-assisted play; run history and JSON/PGN exports identify the mode so results can be distinguished from unassisted runs. Older logs without a lookahead setting are treated as Off.
+
+The UI reports lookahead preparation followed by Jev's decision. Pause/reset/undo abort pending work. Failed or incomplete analysis stops the turn before provider inference and requires an explicit retry. Assisted inputs are larger and may increase provider cost. The exact enriched payload is logged before transmission, together with achieved depth, engine identity, pinned settings and analysis time; model latency remains separate. The analysis metadata is not included in Jev's payload.
+
+The browser API also accepts `window.opening.start({ model: "jev", lookahead: true })`. The saved run setting is authoritative on the server. The command-line benchmark continues to create unassisted games by default.
+
+Native verification: `node --env-file=.env.local --import tsx --test tests/native-stockfish.integration.ts tests/lookahead.integration.ts`. The lookahead integration test uses the installed engine and a fake provider response; it does not spend provider credits.
+
+### Controlled continuation replay
+
+`scripts/replay-lookahead.ts` compares 6-ply and up-to-18-ply previews on the saved positions before White moves 13, 16 and 19. Both arms use the same full history, legal-choice ordering, Stockfish search snapshot, balanced chess instruction and resulting ASCII board. No material-loss summaries, engine scores, rankings or recommendations are sent to Jev. Search uses skill 20, one thread, 64 MiB, depth cap 22 and 15 seconds per position; actual PV lengths and depth are recorded. This experiment does not change the frontend lookahead mode.
+
+```bash
+# Offline preparation and review (no provider requests):
+node --env-file=.env.local --import tsx scripts/replay-lookahead.ts data/runs/<run-id>.json data/replays/<experiment-name>
+# Two decisions per position per arm: at most 12 paid Jev requests.
+node --env-file=.env.local --import tsx scripts/replay-lookahead.ts data/runs/<run-id>.json data/replays/<experiment-name> --live
+```
+
+The output directory contains `experiment.json` with exact paired inputs, assessor-only engine scores, response IDs, usage, costs and attempt records, plus `report.md`. Each attempt is saved before transmission; reusing a directory skips all attempted calls, including failed or interrupted ones. No automatic provider retries occur. A changed source run or configuration requires a fresh directory. Results measure the chosen move against the best move in the shared search, not piece counts or the truncated final board. This selected-position diagnostic does not establish playing strength or explain the model's internal reasoning; both arms also differ in board representation and instructions from the original game.
+
 The board scales to fit the viewport width and height. The model chooser and game controls sit underneath it, with compact evaluation and cost information during play. Run history is collapsed by default.
 
 - **Start game** runs the selected White model → Stockfish → updated model input until the game ends. Changing models requires a new game; all use the same Stockfish settings.
@@ -63,6 +90,8 @@ Each new run is stored as `data/runs/<uuid>.json` by default, with atomic writes
 **Run history** lists all saved runs, model and provider, result/status, ply count, evaluation, mean response time and run cost in USD. The controls below the board monitor the active run cost every two seconds, and history refreshes every three seconds. Open **View** for the event log, or download **JSON** / **PGN**. JSON includes starting position, opponent and analysis settings, full model request inputs, legal options, returned choices, actual model IDs, latency, optional confidence, token usage, per-request cost and its source, a persisted run billing summary, moves/PGN, pauses, undo/reset events and errors. Logging begins with this update; earlier unlogged games cannot be reconstructed.
 
 Requests are logged before provider calls and every completed/error attempt is recorded, including cancellation. Model inputs and outputs are logged; credentials, authorization headers and hidden reasoning are not. A failed run-log creation prevents inference. Failure to save an applied move pauses the loop before the next player. Final page-close state is best effort; provider request records remain on disk. No hidden automatic inference retries occur.
+
+Transient Windows file-replacement failures retry the same completed temporary file up to three times (50, 150 and 500 ms delays). Browser state saves retry network failures, HTTP 408/429 and server errors up to twice (250 and 750 ms delays), preserving the event ID and queue order so a lost response cannot duplicate a saved event. Persistent failures still stop play and expose Retry. Paid model requests are not automatically repeated. The evaluation rail holds the last score during analysis and labels it as the previous position until the current result arrives.
 
 Costs include every priced attempt, including responses rejected as illegal or incomplete. OpenRouter's `usage.cost` is stored as the provider-reported charge, without rounding the stored value. Direct OpenAI costs are calculated from the returned token counts at published Standard rates, and are labeled **Calculated**, not invoice totals. The request explicitly selects `service_tier: default`.
 

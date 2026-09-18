@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "tsx --test tests/*.test.ts",
-    "test:native": "tsx --test tests/native-stockfish.integration.ts",
+    "test:native": "tsx --test tests/native-stockfish.integration.ts tests/lookahead.integration.ts",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write src tests"
   },

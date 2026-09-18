@@ -75,6 +75,53 @@ class ControlledJev implements DecisionPlayer {
   }
 }
 const flush = () => new Promise<void>((resolve) => setImmediate(resolve));
+
+test("lookahead mode persists through retry and ignores progress after pause/reset", async () => {
+  const modes: (boolean | undefined)[] = [];
+  const callbacks: ((
+    stage: import("../src/lib/lookahead").DecisionStage,
+  ) => void)[] = [];
+  const players: ControlledJev[] = [];
+  const session = new ChessSession(
+    () => new ControlledEngine(),
+    (_model, _run, onStage) => {
+      callbacks.push(onStage!);
+      const player = new ControlledJev();
+      players.push(player);
+      return player;
+    },
+    {
+      create: async (_model, _fen, enabled) => {
+        modes.push(enabled);
+        if (modes.length === 1) throw new Error("Disk unavailable");
+        return "assisted-run";
+      },
+      state: async () => {},
+    },
+  );
+  await session.start({ lookahead: true });
+  assert.equal(session.getSnapshot().phase, "error");
+  await session.retry();
+  assert.deepEqual(modes, [true, true]);
+  assert.equal(session.getSnapshot().lookahead, true);
+  assert.match(session.pgn(), /StockfishLookahead "On"/);
+  callbacks[0]("choosing");
+  assert.equal(session.getSnapshot().decisionStage, "choosing");
+  session.pause();
+  callbacks[0]("lookahead");
+  assert.equal(session.getSnapshot().decisionStage, null);
+  assert.equal(players[0].disposed, true);
+  await session.resume();
+  assert.equal(session.getSnapshot().lookahead, true);
+  session.reset();
+  callbacks[1]("choosing");
+  assert.equal(session.getSnapshot().decisionStage, null);
+  assert.equal(session.getSnapshot().phase, "idle");
+  await assert.rejects(
+    session.start({ model: "glm", lookahead: true }),
+    /Jev only/,
+  );
+});
 function setup() {
   const engines: ControlledEngine[] = [];
   const players: ControlledJev[] = [];
