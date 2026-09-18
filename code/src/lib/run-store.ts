@@ -32,7 +32,33 @@ async function write(log: RunLog) {
   await writeFile(temp, JSON.stringify(withRunCosts(log), null, 2) + "\n", {
     mode: 0o600,
   });
-  await rename(temp, target);
+  // Windows readers/antivirus can briefly deny replacing an existing file.
+  // Retry the same complete temp file while the per-run write queue stays locked.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await rename(temp, target);
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code ?? "unknown";
+      if (
+        ["EPERM", "EACCES", "EBUSY", "EAGAIN", "EIO"].includes(code) &&
+        attempt < 3
+      ) {
+        await sleep([50, 150, 500][attempt]);
+        continue;
+      }
+      // Keep the complete temp file for recovery; do not expose paths or contents.
+      console.error("Run log replacement failed", {
+        runId: log.id,
+        code,
+        attempts: attempt + 1,
+      });
+      throw new EngineError(
+        "Could not save the run log after file replacement failed. Retry to continue.",
+        503,
+      );
+    }
+  }
 }
 export async function createRun(
   model: PlayerId,
