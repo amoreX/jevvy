@@ -8,6 +8,7 @@ import { EngineError } from "./native-stockfish";
 import type { RunLog, RunEvent, RunSummary, RunState } from "./run-types";
 import { runProvider } from "./run-types";
 import { withRunCosts, summarizeCosts } from "./run-costs";
+import { LOOKAHEAD_SETTINGS } from "./lookahead";
 
 const globalStore = globalThis as typeof globalThis & {
   chessRunWrites?: Map<string, Promise<unknown>>;
@@ -36,7 +37,13 @@ async function write(log: RunLog) {
 export async function createRun(
   model: PlayerId,
   initialFen: string,
+  lookahead = false,
 ): Promise<RunLog> {
+  if (typeof lookahead !== "boolean" || (lookahead && model !== "jev"))
+    throw new EngineError(
+      "Stockfish lookahead is available for Jev only.",
+      400,
+    );
   let fen: string;
   try {
     fen = new Chess(initialFen).fen();
@@ -46,6 +53,7 @@ export async function createRun(
   const log: RunLog = {
     id: randomUUID(),
     version: 1,
+    lookahead: lookahead ? { ...LOOKAHEAD_SETTINGS } : null,
     model,
     modelId: MODELS[model].id,
     provider: MODELS[model].provider,
@@ -121,6 +129,7 @@ export function summarizeRun(log: RunLog): RunSummary {
   return {
     id: log.id,
     model: log.model,
+    lookahead: log.lookahead ?? null,
     reasoning: log.reasoning,
     provider: runProvider(log),
     startedAt: log.startedAt,

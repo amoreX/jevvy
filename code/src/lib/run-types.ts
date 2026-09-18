@@ -1,6 +1,7 @@
 import type { PlayerId, ProviderId } from "./models";
 import type { Evaluation } from "./evaluation";
 import type { RunCost } from "./costs";
+import type { LookaheadSettings } from "./lookahead";
 export type RunState = {
   phase: string;
   fen: string;
@@ -19,6 +20,7 @@ export type RunEvent = {
   data: Record<string, unknown>;
 };
 export type RunLog = {
+  lookahead?: LookaheadSettings | null;
   id: string;
   version: 1;
   model: PlayerId;
@@ -33,6 +35,7 @@ export type RunLog = {
   billing?: RunCost;
 };
 export type RunSummary = {
+  lookahead?: LookaheadSettings | null;
   reasoning?: string | null;
   id: string;
   model: PlayerId;
@@ -53,18 +56,22 @@ export function runProvider(log: Pick<RunLog, "provider">): ProviderId {
   return log.provider ?? "openrouter";
 }
 export interface RunLogger {
-  create(model: PlayerId, initialFen: string): Promise<string>;
+  create(
+    model: PlayerId,
+    initialFen: string,
+    lookahead?: boolean,
+  ): Promise<string>;
   state(id: string, state: RunState): Promise<void>;
 }
 
 /** Serial persistence is independent of turn cancellation, including final pause/reset events. */
 export class HttpRunLogger implements RunLogger {
   private queue: Promise<unknown> = Promise.resolve();
-  async create(model: PlayerId, initialFen: string) {
+  async create(model: PlayerId, initialFen: string, lookahead = false) {
     const response = await fetch("/api/runs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model, initialFen }),
+      body: JSON.stringify({ model, initialFen, lookahead }),
       signal: AbortSignal.timeout(15000),
     });
     const data = await response.json();

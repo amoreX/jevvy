@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Chess } from "chess.js";
 import { LookaheadCollector, describeContinuation } from "../src/lib/lookahead";
+import { JevPlayer } from "../src/lib/jev";
 
 test("MultiPV requires all distinct legal choices at a common depth and removes rank/score ordering", () => {
   const collector = new LookaheadCollector(["e2e4", "d2d4"]);
@@ -90,4 +91,45 @@ test("continuations handle en passant, castling, promotion, mate and stalemate",
       JSON.stringify(describeContinuation(new Chess(c.fen), c.move, [c.move])),
       c.match,
     );
+});
+
+test("browser reads split progress events followed by the decision, and reports streamed failures", async (t) => {
+  const stages: string[] = [];
+  const decision = {
+    move: "e2e4",
+    fen: new Chess().fen(),
+    model: "typesafe/jev-1.13",
+    choices: ["e2e4"],
+  };
+  t.mock.method(
+    globalThis,
+    "fetch",
+    async () =>
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            for (const chunk of [
+              '{"stage":"look',
+              'ahead"}\n{"stage":"choosing"}\n',
+              JSON.stringify({ decision }) + "\n",
+            ])
+              controller.enqueue(new TextEncoder().encode(chunk));
+            controller.close();
+          },
+        }),
+        { headers: { "content-type": "application/x-ndjson" } },
+      ),
+  );
+  const player = new JevPlayer("jev", "run", (stage) => stages.push(stage));
+  assert.equal((await player.choose("position")).move, "e2e4");
+  assert.deepEqual(stages, ["lookahead", "choosing"]);
+  t.mock.method(
+    globalThis,
+    "fetch",
+    async () =>
+      new Response('{"error":"Lookahead failed"}\n', {
+        headers: { "content-type": "application/x-ndjson" },
+      }),
+  );
+  await assert.rejects(player.choose("position"), /Lookahead failed/);
 });

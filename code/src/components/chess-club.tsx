@@ -84,11 +84,13 @@ export function ChessClub() {
     session.getSnapshot,
   );
   const [selectedModel, setSelectedModel] = useState<PlayerId>("jev");
+  const [selectedLookahead, setSelectedLookahead] = useState(false);
   const [flipped, setFlipped] = useState(false);
   const [confirmNew, setConfirmNew] = useState(false);
   const started = game.phase !== "idle";
   const model = started ? game.model : selectedModel;
   const modelName = MODELS[model].name;
+  const lookahead = started ? game.lookahead : selectedLookahead;
   const running = game.phase === "playing" || game.phase === "loading";
   const orientation: Color = flipped ? "b" : "w";
   const topColor: Color = orientation === "w" ? "b" : "w";
@@ -119,6 +121,10 @@ export function ChessClub() {
   else if (game.phase === "paused") status = "Paused";
   else if (game.result) status = game.result;
   else if (game.analyzing) status = "Analyzing…";
+  else if (game.thinking && game.decisionStage === "lookahead")
+    status = "Preparing Stockfish lookahead…";
+  else if (game.thinking && game.decisionStage === "choosing")
+    status = "Jev is choosing…";
   else if (game.thinking)
     status = `${game.turn === "w" ? modelName : "Stockfish"} is thinking…`;
   else if (started)
@@ -198,13 +204,43 @@ export function ChessClub() {
                     </option>
                   ))}
                 </select>
+                {model === "jev" && (
+                  <div className="lookahead-control">
+                    <label
+                      htmlFor="stockfish-lookahead"
+                      className="lookahead-toggle"
+                    >
+                      <input
+                        id="stockfish-lookahead"
+                        type="checkbox"
+                        role="switch"
+                        checked={lookahead}
+                        disabled={started}
+                        aria-describedby="lookahead-help"
+                        onChange={(event) =>
+                          setSelectedLookahead(event.target.checked)
+                        }
+                      />
+                      Stockfish lookahead{" "}
+                      <strong>{lookahead ? "On" : "Off"}</strong>
+                    </label>
+                    <p id="lookahead-help">
+                      {started
+                        ? "This game’s mode is saved. Start a new game to change it."
+                        : "Give Jev predicted continuations and consequences. Adds analysis time per turn."}
+                    </p>
+                  </div>
+                )}
               </div>
               {!started ? (
                 <button
                   className="start-button"
                   onClick={() => {
                     setConfirmNew(false);
-                    void session.start({ model: selectedModel });
+                    void session.start({
+                      model: selectedModel,
+                      lookahead: selectedModel === "jev" && selectedLookahead,
+                    });
                   }}
                 >
                   <Play size={16} />

@@ -12,11 +12,18 @@ import { JevPlayer, type DecisionPlayer, type JevDecision } from "./jev";
 import { MODELS, isPlayerId, type PlayerId } from "./models";
 import type { Evaluation } from "./evaluation";
 import { HttpRunLogger, type RunLogger, type RunState } from "./run-types";
+import type { DecisionStage } from "./lookahead";
 
-export type GameOptions = { fen?: string; model?: PlayerId };
+export type GameOptions = {
+  fen?: string;
+  model?: PlayerId;
+  lookahead?: boolean;
+};
 export type GamePhase =
   "idle" | "loading" | "playing" | "paused" | "finished" | "error";
 export type GameSnapshot = {
+  lookahead: boolean;
+  decisionStage: DecisionStage | null;
   fen: string;
   history: Move[];
   phase: GamePhase;
@@ -44,6 +51,8 @@ export class ChessSession {
   private generation = 0;
   private listeners = new Set<() => void>();
   private snapshot: GameSnapshot = {
+    lookahead: false,
+    decisionStage: null,
     fen: DEFAULT_POSITION,
     history: [],
     phase: "idle",
@@ -64,10 +73,12 @@ export class ChessSession {
 
   constructor(
     private createEngine: () => ChessEngine = () => new StockfishEngine(),
-    private createJev: (model: PlayerId, runId: string) => DecisionPlayer = (
-      model,
-      runId,
-    ) => new JevPlayer(model, runId),
+    private createJev: (
+      model: PlayerId,
+      runId: string,
+      onStage?: (stage: DecisionStage) => void,
+    ) => DecisionPlayer = (model, runId, onStage) =>
+      new JevPlayer(model, runId, onStage),
     private logs: RunLogger = new HttpRunLogger(),
   ) {}
 
@@ -97,6 +108,7 @@ export class ChessSession {
     this.jev?.dispose();
     this.engine = null;
     this.jev = null;
+    this.publish({ decisionStage: null });
   }
 
   private save(
@@ -220,6 +232,9 @@ export class ChessSession {
     const next = new Chess(options.fen ?? DEFAULT_POSITION);
     const model = options.model ?? "jev";
     if (!isPlayerId(model)) throw new Error("Unknown player model.");
+    const lookahead = options.lookahead ?? false;
+    if (typeof lookahead !== "boolean" || (lookahead && model !== "jev"))
+      throw new Error("Stockfish lookahead is available for Jev only.");
     if (this.snapshot.runId && this.snapshot.phase !== "finished")
       void this.save("new_game", "stopped").catch(() => undefined);
     this.cancel();
@@ -232,6 +247,7 @@ export class ChessSession {
     );
     this.chess.setHeader("White", MODELS[model].label);
     this.chess.setHeader("Black", "Stockfish 19");
+    this.chess.setHeader("StockfishLookahead", lookahead ? "On" : "Off");
     this.chess.setHeader("Result", "*");
     this.publish({
       phase: "loading",
@@ -240,6 +256,7 @@ export class ChessSession {
       error: null,
       decisions: [],
       model,
+      lookahead,
       runId: null,
       evaluation: null,
       analyzing: false,
@@ -248,7 +265,7 @@ export class ChessSession {
       logRevision: 0,
     });
     try {
-      const runId = await this.logs.create(model, this.initialFen);
+      const runId = await this.logs.create(model, this.initialFen, lookahead);
       if (generation !== this.generation) {
         await this.logs.state(runId, {
           phase: "stopped",
@@ -288,7 +305,14 @@ export class ChessSession {
 
   private async connect() {
     const generation = this.generation;
-    const jev = this.createJev(this.snapshot.model, this.snapshot.runId!);
+    const jev = this.createJev(
+      this.snapshot.model,
+      this.snapshot.runId!,
+      (stage) => {
+        if (generation === this.generation)
+          this.publish({ decisionStage: stage });
+      },
+    );
     const engine = this.createEngine();
     this.jev = jev;
     this.engine = engine;
@@ -329,7 +353,10 @@ export class ChessSession {
           return;
         const expectedFen = this.chess.fen();
         const white = this.chess.turn() === "w";
-        this.publish({ thinking: true });
+        this.publish({
+          thinking: true,
+          decisionStage: white && this.snapshot.lookahead ? "lookahead" : null,
+        });
         let decision: JevDecision | undefined;
         const uci = white
           ? (decision = await jev.choose(this.position())).move
@@ -350,6 +377,7 @@ export class ChessSession {
         this.chess.move(legal);
         this.publish({
           thinking: false,
+          decisionStage: null,
           ...(decision
             ? {
                 decisions: [
@@ -384,7 +412,11 @@ export class ChessSession {
     if (this.snapshot.phase !== "paused" && this.snapshot.phase !== "error")
       return;
     if (!this.snapshot.runId) {
-      await this.start({ model: this.snapshot.model, fen: this.chess.fen() });
+      await this.start({
+        model: this.snapshot.model,
+        fen: this.chess.fen(),
+        lookahead: this.snapshot.lookahead,
+      });
       return;
     }
     this.cancel();

@@ -28,6 +28,20 @@ This is a local experiment. The provider route spends the server's provider cred
 
 ## Watching and controlling a game
 
+### Optional Jev lookahead
+
+Select Jev and enable **Stockfish lookahead** before starting a game to attach predicted continuations and concrete consequences to every legal move. The switch defaults to Off and is locked for the game, including pause/resume and undo; choose New game to change it. Other models do not use this mode.
+
+The server runs a separate Stockfish 19 MultiPV search at skill 20, one thread, 16 MB hash, depth capped at 16 and a total search budget of 3 seconds. It uses the latest complete iteration covering every legal move and preserves the original legal-choice ordering. Actual depth depends on the position and machine. Each choice includes up to six plies (including the candidate move), the resulting FEN, captures, promotions, castling, checks, and any rule-based terminal result reached. Lines are validated and replayed with the full game history. These are predicted best-play lines; the Club-strength opponent may choose differently.
+
+No engine score, ranking, win probability, or recommended move is sent to Jev. The engine search can examine further than the displayed six plies. This is still engine-assisted play; run history and JSON/PGN exports identify the mode so results can be distinguished from unassisted runs. Older logs without a lookahead setting are treated as Off.
+
+The UI reports lookahead preparation followed by Jev's decision. Pause/reset/undo abort pending work. Failed or incomplete analysis stops the turn before provider inference and requires an explicit retry. Assisted inputs are larger and may increase provider cost. The exact enriched payload is logged before transmission, together with achieved depth, engine identity, pinned settings and analysis time; model latency remains separate. The analysis metadata is not included in Jev's payload.
+
+The browser API also accepts `window.opening.start({ model: "jev", lookahead: true })`. The saved run setting is authoritative on the server. The command-line benchmark continues to create unassisted games by default.
+
+Native verification: `node --env-file=.env.local --import tsx --test tests/native-stockfish.integration.ts tests/lookahead.integration.ts`. The lookahead integration test uses the installed engine and a fake provider response; it does not spend provider credits.
+
 The board scales to fit the viewport width and height. The model chooser and game controls sit underneath it, with compact evaluation and cost information during play. Run history is collapsed by default.
 
 - **Start game** runs the selected White model → Stockfish → updated model input until the game ends. Changing models requires a new game; all use the same Stockfish settings.

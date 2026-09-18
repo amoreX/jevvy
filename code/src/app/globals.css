@@ -270,6 +270,7 @@ summary:focus-visible {
 }
 .model-picker {
   display: flex;
+  flex-wrap: wrap;
   flex: 1 1 300px;
   min-width: 0;
   align-items: center;
@@ -295,6 +296,27 @@ summary:focus-visible {
 }
 .model-picker select:disabled {
   opacity: 0.7;
+}
+.lookahead-control {
+  flex: 1 0 100%;
+  min-width: 0;
+}
+.lookahead-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+}
+.lookahead-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--green);
+}
+.lookahead-control p {
+  margin: 2px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #626f5a;
 }
 .start-button,
 .game-action-row button,
