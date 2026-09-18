@@ -205,7 +205,11 @@ export function ChessClub() {
                   ))}
                 </select>
                 {model === "jev" && (
-                  <div className="lookahead-control">
+                  <div
+                    className="lookahead-control"
+                    tabIndex={started ? 0 : undefined}
+                    aria-describedby={started ? "lookahead-help" : undefined}
+                  >
                     <label
                       htmlFor="stockfish-lookahead"
                       className="lookahead-toggle"
@@ -224,7 +228,7 @@ export function ChessClub() {
                       Stockfish lookahead{" "}
                       <strong>{lookahead ? "On" : "Off"}</strong>
                     </label>
-                    <p id="lookahead-help">
+                    <p id="lookahead-help" role="tooltip">
                       {started
                         ? "This game’s mode is saved. Start a new game to change it."
                         : "Give Jev predicted continuations and consequences. Adds analysis time per turn."}
