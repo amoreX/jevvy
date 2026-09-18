@@ -42,6 +42,19 @@ The browser API also accepts `window.opening.start({ model: "jev", lookahead: tr
 
 Native verification: `node --env-file=.env.local --import tsx --test tests/native-stockfish.integration.ts tests/lookahead.integration.ts`. The lookahead integration test uses the installed engine and a fake provider response; it does not spend provider credits.
 
+### Controlled continuation replay
+
+`scripts/replay-lookahead.ts` compares 6-ply and up-to-18-ply previews on the saved positions before White moves 13, 16 and 19. Both arms use the same full history, legal-choice ordering, Stockfish search snapshot, balanced chess instruction and resulting ASCII board. No material-loss summaries, engine scores, rankings or recommendations are sent to Jev. Search uses skill 20, one thread, 64 MiB, depth cap 22 and 15 seconds per position; actual PV lengths and depth are recorded. This experiment does not change the frontend lookahead mode.
+
+```bash
+# Offline preparation and review (no provider requests):
+node --env-file=.env.local --import tsx scripts/replay-lookahead.ts data/runs/<run-id>.json data/replays/<experiment-name>
+# Two decisions per position per arm: at most 12 paid Jev requests.
+node --env-file=.env.local --import tsx scripts/replay-lookahead.ts data/runs/<run-id>.json data/replays/<experiment-name> --live
+```
+
+The output directory contains `experiment.json` with exact paired inputs, assessor-only engine scores, response IDs, usage, costs and attempt records, plus `report.md`. Each attempt is saved before transmission; reusing a directory skips all attempted calls, including failed or interrupted ones. No automatic provider retries occur. A changed source run or configuration requires a fresh directory. Results measure the chosen move against the best move in the shared search, not piece counts or the truncated final board. This selected-position diagnostic does not establish playing strength or explain the model's internal reasoning; both arms also differ in board representation and instructions from the original game.
+
 The board scales to fit the viewport width and height. The model chooser and game controls sit underneath it, with compact evaluation and cost information during play. Run history is collapsed by default.
 
 - **Start game** runs the selected White model → Stockfish → updated model input until the game ends. Changing models requires a new game; all use the same Stockfish settings.
