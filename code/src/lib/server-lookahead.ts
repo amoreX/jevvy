@@ -55,7 +55,19 @@ export async function prepareLookahead(
   return {
     payload: {
       ...payload,
-      questions: { move: { ...payload.questions.move, criteria } },
+      questions: {
+        move: {
+          ...payload.questions.move,
+          instructions:
+            "Choose the best next legal chess move for White to improve its position and ultimately checkmate Black. " +
+            "Decide which candidates deserve consideration and compare their resulting positions using the supplied continuations, including the opponent's strongest predicted replies and recaptures. " +
+            "Consider threats, king safety, material, piece activity and positional compensation together; a check or capture alone does not establish that a move is best. " +
+            "Sacrifices can be correct when the resulting position offers sufficient tactical or positional compensation. " +
+            "The displayed continuations are limited predictions, not guaranteed play or complete proof; use your own judgment about remaining threats and opportunities. " +
+            "Every option is legal in this exact position. Select one move based on your own comparison.",
+          criteria,
+        },
+      },
     },
     metadata: {
       engine: analysis.engine,
