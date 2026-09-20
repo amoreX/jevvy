@@ -44,6 +44,19 @@ export function createDecisionRequest(input: unknown) {
       game: "standard chess",
       your_color: "white",
       side_to_move: "white",
+      piece_values: {
+        pawn: 1,
+        knight: 3,
+        bishop: 3,
+        rook: 5,
+        queen: 9,
+        king: null,
+      },
+      piece_value_guidance:
+        "These are approximate relative material values in pawn units, shared by both colors. " +
+        "The king has no finite trade value and cannot be captured; checkmate decides the game. " +
+        "Use these values when considering exchanges alongside threats, king safety and piece activity. " +
+        "Sacrifices can be correct when they provide sufficient tactical or positional compensation; maximizing material alone is not the objective.",
       fen: chess.fen(),
       pieces: chess
         .board()

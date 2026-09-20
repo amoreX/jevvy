@@ -77,6 +77,18 @@ test("real MultiPV enriches every legal choice; saved payload equals transmitted
   assert.ok(metadata.depth > 0);
   assert.ok(metadata.analysisMs > 0);
   const original = createDecisionRequest(input);
+  assert.deepEqual(sent!.state.piece_values, {
+    pawn: 1,
+    knight: 3,
+    bishop: 3,
+    rook: 5,
+    queen: 9,
+    king: null,
+  });
+  assert.equal(
+    sent!.state.piece_value_guidance,
+    original.state.piece_value_guidance,
+  );
   assert.deepEqual(
     Object.keys(sent!.questions.move.criteria),
     Object.keys(original.questions.move.criteria),

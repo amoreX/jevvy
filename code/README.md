@@ -28,6 +28,8 @@ This is a local experiment. The provider route spends the server's provider cred
 
 ## Watching and controlling a game
 
+The default shared model input includes approximate piece values: pawn 1, knight 3, bishop 3, rook 5 and queen 9. The king has no finite trade value. These references apply with lookahead On or Off; the guidance considers threats, king safety, activity and compensation for sacrifices alongside material. They are fixed chess reference values, not Stockfish scores or move rankings.
+
 ### Optional Jev lookahead
 
 Select Jev and enable **Stockfish lookahead** before starting a game to attach predicted continuations and concrete consequences to every legal move. The switch defaults to Off and is locked for the game, including pause/resume and undo; choose New game to change it. Other models do not use this mode.
