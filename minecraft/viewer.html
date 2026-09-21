@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jev · Minecraft</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; overflow: hidden; background: #111a20; color: #f5f6f4; font: 14px system-ui, sans-serif; }
+    #scene { position: fixed; inset: 0; }
+    canvas { display: block; }
+    .panel { background: #11201deb; backdrop-filter: blur(18px); border: 1px solid #ffffff25; border-radius: 14px; box-shadow: 0 8px 30px #0003; }
+    header { position: fixed; inset: 20px 20px auto; display: flex; justify-content: space-between; align-items: start; gap: 16px; pointer-events: none; }
+    header > * { pointer-events: auto; }
+    .identity { padding: 13px 18px; }
+    h1 { font-size: 23px; margin: 0; letter-spacing: -.7px; }
+    #live { display: inline-flex; align-items: center; gap: 6px; margin-left: 12px; vertical-align: middle; font-size: 11px; font-weight: 500; letter-spacing: 0; }
+    #live::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #e6c56f; }
+    #live[data-connected=true]::before { background: #87edb6; }
+    .vitals { display: flex; gap: 14px; margin-top: 6px; font-size: 11px; color: #c0cec5; }
+    #health { color: #ffb6aa; } #food { color: #efcf93; }
+    .modes { display: flex; padding: 5px; gap: 4px; }
+    button { border: 0; background: transparent; color: #d4ddd7; border-radius: 9px; padding: 11px 17px; font: inherit; cursor: pointer; }
+    button[aria-pressed=true], #task-submit { background: #d0edcf; color: #132319; font-weight: 650; }
+    button:focus-visible, textarea:focus-visible { outline: 2px solid #d0edcf; outline-offset: 3px; }
+    button:disabled { opacity: .5; cursor: default; }
+    #crosshair { position: fixed; left: 50%; top: 50%; width: 14px; height: 14px; transform: translate(-50%, -50%); pointer-events: none; opacity: .7; }
+    #crosshair::before, #crosshair::after { content: ''; position: absolute; background: white; box-shadow: 0 0 2px black; }
+    #crosshair::before { width: 14px; height: 2px; top: 6px; } #crosshair::after { height: 14px; width: 2px; left: 6px; }
+    #loading { position: fixed; left: 50%; top: 45%; transform: translate(-50%, -50%); padding: 16px 24px; }
+    .task { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); width: min(660px, calc(100% - 32px)); padding: 16px; }
+    form { display: flex; align-items: center; gap: 14px; }
+    textarea { flex: 1; width: 100%; min-width: 0; background: transparent; color: #f5f6f4; border: 0; resize: none; padding: 7px; font: 16px/1.5 system-ui, sans-serif; }
+    textarea::placeholder { color: #a4b9aa; }
+    #task-submit { min-width: 82px; }
+    #task-status { color: #abc5b2; font-size: 12px; line-height: 1.5; margin: 8px 7px 0; max-height: 100px; overflow-y: auto; }
+    [hidden] { display: none !important; }
+    @media(max-width: 600px) { header { inset: 12px 12px auto; } .identity { padding: 10px 12px; } button { padding: 10px 12px; } h1 { font-size: 20px; } .task { bottom: 16px; padding: 12px; } form { gap: 7px; } textarea { font-size: 15px; } }
+  </style>
+</head>
+<body>
+  <main id="scene" aria-label="Live 3D view of Jev’s Minecraft world"></main>
+  <header>
+    <div class="panel identity"><h1>Jev <span id="live" data-connected="false"><span id="connection">Connecting</span></span></h1><div class="vitals"><span>Health <span id="health">—</span></span><span>Food <span id="food">—</span></span></div></div>
+    <nav class="panel modes" aria-label="Camera"><button id="eyes" aria-pressed="false">Jev’s eyes</button><button id="orbit" aria-pressed="true">Orbit</button></nav>
+  </header>
+  <div id="loading" class="panel">Loading Jev’s world…</div>
+  <div id="crosshair" hidden></div>
+  <div class="panel task">
+    <form id="task-form" novalidate>
+      <textarea id="task-text" aria-label="Tell Jev what to do" placeholder="Tell Jev what to do…" rows="2" maxlength="2000"></textarea>
+      <button id="task-submit" type="submit" disabled>Do it</button>
+    </form>
+    <div id="task-status" role="status">Connecting to Jev…</div>
+  </div>
+  <script src="index.js"></script>
+</body>
+</html>

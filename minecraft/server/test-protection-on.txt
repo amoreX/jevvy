@@ -1,0 +1,6 @@
+effect give Jev minecraft:resistance infinite 4 true
+effect give Jev minecraft:fire_resistance infinite 0 true
+effect give Jev minecraft:water_breathing infinite 0 true
+effect give Jev minecraft:saturation infinite 0 true
+effect give Jev minecraft:regeneration infinite 1 true
+gamemode survival Jev

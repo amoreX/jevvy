@@ -1,0 +1,45 @@
+{
+  "name": "minecraft-jev",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Jev's headless Minecraft Java 26.2 player instance",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "start": "node --env-file=.env bot.js",
+    "up": "node --env-file=.env instance.js start",
+    "down": "node instance.js stop",
+    "status": "node instance.js status",
+    "ping": "node ping.js",
+    "build:viewer": "python3 prepare-viewer-assets.py && node build-viewer.js"
+  },
+  "dependencies": {
+    "@openrouter/sdk": "1.3.1",
+    "express": "4.22.3",
+    "minecraft-protocol": "https://github.com/Complexity-ML/node-minecraft-protocol-26.2/releases/download/complexity-26.2.3/minecraft-protocol-complexity-26.2.3.tgz",
+    "mineflayer": "https://github.com/Complexity-ML/mineflayer-26.2/releases/download/complexity-26.2.3/mineflayer-complexity-26.2.3.tgz",
+    "mineflayer-collectblock": "1.6.0",
+    "mineflayer-pathfinder": "2.4.5",
+    "mineflayer-tool": "1.2.0",
+    "prismarine-viewer": "1.33.0",
+    "socket.io": "4.8.3",
+    "socket.io-client": "4.8.3",
+    "three": "0.128.0"
+  },
+  "overrides": {
+    "minecraft-protocol": "$minecraft-protocol",
+    "minecraft-data": "https://github.com/Complexity-ML/node-minecraft-data-26.2/releases/download/complexity-26.2.5/minecraft-data-complexity-26.2.5.tgz",
+    "prismarine-chunk": "https://github.com/Complexity-ML/prismarine-chunk-26.2/releases/download/complexity-26.2.0/prismarine-chunk-complexity-26.2.0.tgz",
+    "prismarine-physics": "https://github.com/Complexity-ML/prismarine-physics-26.2/releases/download/complexity-26.2.0/prismarine-physics-complexity-26.2.0.tgz"
+  },
+  "devDependencies": {
+    "assert": "2.1.0",
+    "buffer": "6.0.3",
+    "canvas": "3.2.0",
+    "process": "0.11.10",
+    "webpack": "5.111.1",
+    "webpack-cli": "6.0.1"
+  }
+}

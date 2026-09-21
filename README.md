@@ -2,7 +2,9 @@
 
 A minimal chess site for watching AI models play White against native **Stockfish 19**. Choose a model and press **Start game**; the app plays both sides until checkmate or a rule-based draw. The board, controls, evaluation bar, run history, and costs are built with Next.js, React, TypeScript, Tailwind CSS, and chess.js.
 
-All application code lives in [`code/`](code/). The model settings below describe the current implementation; changing them requires editing the server configuration and starting a new run.
+The chess application lives in [`code/`](code/). The separate [`minecraft/`](minecraft/) project runs Jev as a headless Minecraft 26.2 player, with a live browser viewer, task input, and `@jev` in-game chat. See its [setup instructions](minecraft/README.md#setup) to run it.
+
+The model settings below describe the chess implementation; changing them requires editing the server configuration and starting a new run.
 
 | White player | Provider | Model ID | Reasoning |
 | --- | --- | --- | --- |
@@ -33,7 +35,7 @@ OPENAI_API_KEY=your_openai_key
 # CHESS_RUNS_DIR=/absolute/path/to/private/run-logs
 ```
 
-OpenRouter is used for Jev and GLM; Astra uses its own OpenAI key. Keep these variables server-only, without a `NEXT_PUBLIC_` prefix. **No `.env*` files, including example templates, are tracked in this repository.** Keys, private run data, dependencies, and generated builds are excluded from Git.
+OpenRouter is used for Jev and GLM; Astra uses its own OpenAI key. Keep these variables server-only, without a `NEXT_PUBLIC_` prefix. **No `.env*` files are tracked in this repository.** Minecraft includes a credential-free `env.example` template to copy locally. Keys, private run data, dependencies, and generated builds are excluded from Git.
 
 ```bash
 npm run dev -- --hostname 127.0.0.1

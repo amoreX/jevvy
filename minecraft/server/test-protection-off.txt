@@ -1,0 +1,5 @@
+effect clear Jev minecraft:resistance
+effect clear Jev minecraft:fire_resistance
+effect clear Jev minecraft:water_breathing
+effect clear Jev minecraft:saturation
+effect clear Jev minecraft:regeneration
