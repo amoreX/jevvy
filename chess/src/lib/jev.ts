@@ -106,7 +106,7 @@ export class JevPlayer implements DecisionPlayer {
     const data = await this.request();
     if (!data.configured) {
       throw new Error(
-        `Add ${MODELS[this.model].keyName} to code/.env.local and restart the server, then retry.`,
+        `Add ${MODELS[this.model].keyName} to chess/.env.local and restart the server, then retry.`,
       );
     }
   }

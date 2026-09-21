@@ -65,7 +65,7 @@ export async function chooseGlmMove(
   const key = process.env.OPENROUTER_API_KEY?.trim();
   if (!key)
     throw new EngineError(
-      "Add OPENROUTER_API_KEY to code/.env.local and restart the server, then retry.",
+      "Add OPENROUTER_API_KEY to chess/.env.local and restart the server, then retry.",
     );
   if (signal.aborted) throw new EngineError("GLM request cancelled.", 499);
   if (activeRequests >= requestLimit)

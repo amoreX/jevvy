@@ -72,7 +72,7 @@ export async function chooseAstraMove(
   const key = process.env.OPENAI_API_KEY?.trim();
   if (!key)
     throw new EngineError(
-      "Add OPENAI_API_KEY to code/.env.local and restart the server, then retry.",
+      "Add OPENAI_API_KEY to chess/.env.local and restart the server, then retry.",
     );
   if (signal.aborted) throw new EngineError("Astra request cancelled.", 499);
   if (activeRequests >= requestLimit)
