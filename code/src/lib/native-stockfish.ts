@@ -4,6 +4,12 @@ import { createInterface } from "node:readline";
 import { Chess } from "chess.js";
 import { LEVELS, type Difficulty } from "./stockfish";
 import { parseEvaluation, type Evaluation } from "./evaluation";
+import {
+  LookaheadCollector,
+  LOOKAHEAD_SETTINGS,
+  type LookaheadLines,
+  type LookaheadSettings,
+} from "./lookahead";
 
 export class EngineError extends Error {
   constructor(
@@ -89,7 +95,13 @@ async function runStockfish(
   search: ReturnType<typeof parseEngineRequest> | undefined,
   signal: AbortSignal,
   analyze = false,
-): Promise<{ name: string; move?: string; evaluation?: Evaluation }> {
+  lookahead?: LookaheadSettings,
+): Promise<{
+  name: string;
+  move?: string;
+  evaluation?: Evaluation;
+  lookahead?: LookaheadLines;
+}> {
   if (signal.aborted) throw new EngineError("Engine request cancelled.", 499);
   if (activeProcesses >= 4)
     throw new EngineError("Stockfish is busy. Please retry in a moment.", 503);
@@ -104,6 +116,12 @@ async function runStockfish(
       const lines = createInterface({ input: child.stdout });
       let name = "Stockfish";
       let evaluation: Evaluation | undefined;
+      const collector =
+        lookahead && search
+          ? new LookaheadCollector(
+              search.chess.moves({ verbose: true }).map((move) => move.lan),
+            )
+          : undefined;
       let settled = false;
       const timeout = setTimeout(
         () =>
@@ -133,6 +151,7 @@ async function runStockfish(
             name,
             ...(move ? { move } : {}),
             ...(evaluation ? { evaluation } : {}),
+            ...(collector?.complete ? { lookahead: collector.complete } : {}),
           });
       }
 
@@ -162,6 +181,7 @@ async function runStockfish(
       lines.on("line", (raw: string) => {
         if (settled) return;
         const line = raw.trim();
+        collector?.accept(line);
         if (analyze && search) {
           const score = parseEvaluation(line, search.chess.fen());
           if (score) evaluation = score;
@@ -169,16 +189,26 @@ async function runStockfish(
         if (line.startsWith("id name ")) name = line.slice(8);
         if (line === "uciok") {
           child.stdin.write(
-            "setoption name Threads value 1\nsetoption name Hash value 16\nucinewgame\nisready\n",
+            "setoption name Threads value 1\nsetoption name Hash value 16\n" +
+              (lookahead && search
+                ? `setoption name MultiPV value ${search.chess.moves().length}\n`
+                : "") +
+              "ucinewgame\nisready\n",
           );
         } else if (line === "readyok") {
           if (!search) {
             finish();
             return;
           }
-          const level = analyze
-            ? { skill: 20, depth: 16, time: 600 }
-            : LEVELS[search.difficulty];
+          const level = lookahead
+            ? {
+                skill: lookahead.skill,
+                depth: lookahead.depth,
+                time: lookahead.timeMs,
+              }
+            : analyze
+              ? { skill: 20, depth: 16, time: 600 }
+              : LEVELS[search.difficulty];
           child.stdin.write(
             `setoption name Skill Level value ${level.skill}\n${search.position}\ngo depth ${level.depth} movetime ${level.time}\n`,
           );
@@ -210,6 +240,23 @@ export function probeStockfish(signal: AbortSignal) {
 
 export function findBestMove(input: unknown, signal: AbortSignal) {
   return runStockfish(parseEngineRequest(input), signal);
+}
+
+export async function analyzeLegalMoves(
+  input: unknown,
+  signal: AbortSignal,
+  settings = LOOKAHEAD_SETTINGS,
+) {
+  const parsed = parseEngineRequest(input);
+  if (parsed.chess.turn() !== "w")
+    throw new EngineError("Jev lookahead requires White to move.", 422);
+  const result = await runStockfish(parsed, signal, false, settings);
+  if (!result.lookahead)
+    throw new EngineError(
+      "Stockfish lookahead did not cover every legal move. Retry to continue.",
+      503,
+    );
+  return { ...result.lookahead, engine: result.name, settings };
 }
 
 export async function evaluatePosition(

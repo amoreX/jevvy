@@ -25,9 +25,15 @@ export async function POST(request: Request) {
       typeof body.initialFen !== "string"
     )
       throw new EngineError("A model and starting FEN are required.", 400);
-    return Response.json(await createRun(body.model, body.initialFen), {
-      headers: noStore,
-    });
+    const lookahead = "lookahead" in body ? body.lookahead : false;
+    if (typeof lookahead !== "boolean")
+      throw new EngineError("Invalid lookahead setting.", 400);
+    return Response.json(
+      await createRun(body.model, body.initialFen, lookahead),
+      {
+        headers: noStore,
+      },
+    );
   } catch (error) {
     return apiFailure(error);
   }

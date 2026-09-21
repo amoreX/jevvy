@@ -1,6 +1,7 @@
 import type { PlayerId, ProviderId } from "./models";
 import type { Evaluation } from "./evaluation";
 import type { RunCost } from "./costs";
+import type { LookaheadSettings } from "./lookahead";
 export type RunState = {
   phase: string;
   fen: string;
@@ -19,6 +20,7 @@ export type RunEvent = {
   data: Record<string, unknown>;
 };
 export type RunLog = {
+  lookahead?: LookaheadSettings | null;
   id: string;
   version: 1;
   model: PlayerId;
@@ -33,6 +35,7 @@ export type RunLog = {
   billing?: RunCost;
 };
 export type RunSummary = {
+  lookahead?: LookaheadSettings | null;
   reasoning?: string | null;
   id: string;
   model: PlayerId;
@@ -53,18 +56,22 @@ export function runProvider(log: Pick<RunLog, "provider">): ProviderId {
   return log.provider ?? "openrouter";
 }
 export interface RunLogger {
-  create(model: PlayerId, initialFen: string): Promise<string>;
+  create(
+    model: PlayerId,
+    initialFen: string,
+    lookahead?: boolean,
+  ): Promise<string>;
   state(id: string, state: RunState): Promise<void>;
 }
 
 /** Serial persistence is independent of turn cancellation, including final pause/reset events. */
 export class HttpRunLogger implements RunLogger {
   private queue: Promise<unknown> = Promise.resolve();
-  async create(model: PlayerId, initialFen: string) {
+  async create(model: PlayerId, initialFen: string, lookahead = false) {
     const response = await fetch("/api/runs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model, initialFen }),
+      body: JSON.stringify({ model, initialFen, lookahead }),
       signal: AbortSignal.timeout(15000),
     });
     const data = await response.json();
@@ -74,18 +81,35 @@ export class HttpRunLogger implements RunLogger {
   }
   state(id: string, state: RunState): Promise<void> {
     const eventId = crypto.randomUUID();
+    const body = JSON.stringify({ eventId, state });
     const save = async () => {
-      const response = await fetch(`/api/runs/${id}`, {
-        method: "POST",
-        keepalive: true,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eventId, state }),
-        signal: AbortSignal.timeout(15000),
-      });
-      if (!response.ok)
-        throw new Error(
-          "Could not save the run log. Check the server and retry.",
+      for (let attempt = 0; attempt < 3; attempt++) {
+        let response: Response | undefined;
+        try {
+          response = await fetch(`/api/runs/${id}`, {
+            method: "POST",
+            keepalive: true,
+            headers: { "Content-Type": "application/json" },
+            body,
+            signal: AbortSignal.timeout(15000),
+          });
+        } catch {
+          // Lost replies may have committed. Reuse eventId for server deduplication.
+        }
+        if (response?.ok) return;
+        const retryable =
+          !response ||
+          response.status >= 500 ||
+          [408, 429].includes(response.status);
+        await response?.body?.cancel().catch(() => undefined);
+        if (!retryable || attempt === 2)
+          throw new Error(
+            "Could not save the run log. Check the server and retry.",
+          );
+        await new Promise((resolve) =>
+          setTimeout(resolve, [250, 750][attempt]),
         );
+      }
     };
     const next = this.queue.catch(() => undefined).then(save);
     this.queue = next;

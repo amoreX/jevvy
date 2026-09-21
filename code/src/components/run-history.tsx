@@ -143,6 +143,12 @@ export function RunHistory({ refreshKey }: { refreshKey: string }) {
                     {modelLabel(run.model, run.reasoning)}
                     <br />
                     <small>{PROVIDERS[run.provider]}</small>
+                    {run.model === "jev" && (
+                      <>
+                        <br />
+                        <small>Lookahead {run.lookahead ? "On" : "Off"}</small>
+                      </>
+                    )}
                   </td>
                   <td>
                     {run.result ??
@@ -203,6 +209,8 @@ export function RunHistory({ refreshKey }: { refreshKey: string }) {
           <p className="evaluation-caption">
             {PROVIDERS[runProvider(log)]} · Stockfish 19 · Club ·{" "}
             {log.events.length} recorded events.
+            {log.model === "jev" &&
+              ` Lookahead ${log.lookahead ? "On" : "Off"}.`}
           </p>
           {log.billing && (
             <p className="run-cost-total">

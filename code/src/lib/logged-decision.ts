@@ -7,12 +7,15 @@ import { EngineError } from "./native-stockfish";
 import { MODELS, type PlayerId } from "./models";
 import { runProvider } from "./run-types";
 import { ProviderError } from "./provider-error";
+import { prepareLookahead } from "./server-lookahead";
+import type { DecisionStage } from "./lookahead";
 
 /** Record the exact model input before spending credits, then the outcome of every attempt. */
 export async function loggedDecision(
   model: PlayerId,
   input: unknown,
   signal: AbortSignal,
+  onStage?: (stage: DecisionStage) => void,
 ) {
   const context = createDecisionRequest(input);
   const players = {
@@ -39,13 +42,45 @@ export async function loggedDecision(
       409,
     );
   const requestId = randomUUID();
+  let jevPayload = context;
+  let lookaheadMetadata:
+    Awaited<ReturnType<typeof prepareLookahead>>["metadata"] | undefined;
+  if (log.lookahead) {
+    if (model !== "jev")
+      throw new EngineError("Lookahead is available for Jev only.", 400);
+    onStage?.("lookahead");
+    try {
+      const prepared = await prepareLookahead(
+        input,
+        context,
+        signal,
+        log.lookahead,
+      );
+      jevPayload = prepared.payload;
+      lookaheadMetadata = prepared.metadata;
+    } catch (error) {
+      await appendRunEvent(log.id, "lookahead_error", {
+        message:
+          error instanceof EngineError
+            ? error.message
+            : "Stockfish lookahead failed. Retry to continue.",
+      });
+      throw error;
+    }
+  }
+  if (signal.aborted) throw new EngineError("Jev request cancelled.", 499);
   await appendRunEvent(log.id, "decision_request", {
     requestId,
     provider: MODELS[model].provider,
-    request: request(input),
+    request: model === "jev" ? jevPayload : request(input),
+    ...(lookaheadMetadata ? { lookahead: lookaheadMetadata } : {}),
   });
   try {
-    const decision = await choose(input, signal);
+    onStage?.("choosing");
+    const decision =
+      model === "jev"
+        ? await chooseJevMove(input, signal, jevPayload)
+        : await choose(input, signal);
     await appendRunEvent(log.id, "decision_result", { requestId, ...decision });
     return decision;
   } catch (error) {

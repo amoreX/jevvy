@@ -54,3 +54,30 @@ export function whiteShare(e: Evaluation | null) {
   // Visual scale only, not a win probability.
   return Math.max(3, Math.min(97, 50 + 47 * Math.tanh((e.cp ?? 0) / 400)));
 }
+
+/** Keep the last estimate visible without presenting it as the new board's score. */
+export function evaluationPresentation(
+  game: {
+    evaluation: Evaluation | null;
+    fen: string;
+    analyzing: boolean;
+    evaluationError: string | null;
+  },
+  whiteName: string,
+) {
+  const displayed = game.evaluation;
+  const stale = !!displayed && displayed.fen !== game.fen;
+  const label = stale
+    ? `Previous position — ${game.evaluationError ?? "updating evaluation…"}`
+    : (game.evaluationError ??
+      (game.analyzing
+        ? "Analyzing position…"
+        : evaluationLabel(displayed, whiteName)));
+  return {
+    displayed,
+    stale,
+    label,
+    score: evaluationScore(displayed),
+    share: whiteShare(displayed),
+  };
+}

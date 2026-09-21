@@ -18,6 +18,19 @@ test("the opening payload contains all 20 moves, structured state and no engine 
   assert.equal(payload.model, JEV_MODEL);
   assert.equal(payload.state.pieces.length, 32);
   assert.equal(payload.state.fen, DEFAULT_POSITION);
+  assert.deepEqual(payload.state.piece_values, {
+    pawn: 1,
+    knight: 3,
+    bishop: 3,
+    rook: 5,
+    queen: 9,
+    king: null,
+  });
+  assert.match(
+    payload.state.piece_value_guidance,
+    /king has no finite trade value/,
+  );
+  assert.match(payload.state.piece_value_guidance, /Sacrifices can be correct/);
   assert.equal(Object.keys(payload.questions.move.criteria).length, 20);
   assert.match(payload.questions.move.criteria.e2e4, /pawn from e2 to e4/);
   assert.equal(JSON.stringify(payload).includes("evaluation"), false);
@@ -73,6 +86,8 @@ test("server uses the Decisions endpoint, keeps auth private, and accepts option
       assert.equal(body.questions.move.type, "choice");
       assert.equal(Object.keys(body.questions.move.criteria).length, 20);
       assert.equal(body.model, JEV_MODEL);
+      assert.equal(body.state.piece_values.queen, 9);
+      assert.equal(body.state.piece_values.king, null);
       return Response.json({
         model: JEV_MODEL,
         answers: { move: { type: "choice", choice: "g1f3" } },
