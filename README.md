@@ -1,5 +1,7 @@
 # Jevvy
 
+New experiment: [Jev Picks](jev-picks/) helps you work through a decision with an adaptive Sonnet 5 interview, editable options, and Jev scoring. See its [setup guide](jev-picks/README.md); it runs locally on port 3010.
+
 A minimal chess site for watching AI models play White against native **Stockfish 19**. Choose a model and press **Start game**; the app plays both sides until checkmate or a rule-based draw. The board, controls, evaluation bar, run history, and costs are built with Next.js, React, TypeScript, Tailwind CSS, and chess.js.
 
 The chess application lives in [`chess/`](chess/). The separate [`minecraft/`](minecraft/) project runs Jev as a headless Minecraft 26.2 player, with a live browser viewer, task input, and `@jev` in-game chat. See its [setup instructions](minecraft/README.md#setup) to run it.
