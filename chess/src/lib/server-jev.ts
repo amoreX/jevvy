@@ -105,7 +105,7 @@ export async function chooseJevMove(
   const key = process.env.OPENROUTER_API_KEY?.trim();
   if (!key)
     throw new EngineError(
-      "Add OPENROUTER_API_KEY to code/.env.local and restart the server, then retry.",
+      "Add OPENROUTER_API_KEY to chess/.env.local and restart the server, then retry.",
       503,
     );
   if (signal.aborted) throw new EngineError("Jev request cancelled.", 499);
@@ -129,7 +129,7 @@ export async function chooseJevMove(
     });
     if (!response.ok) {
       const messages: Record<number, string> = {
-        401: "OpenRouter rejected the API key. Check code/.env.local and restart the server.",
+        401: "OpenRouter rejected the API key. Check chess/.env.local and restart the server.",
         402: "OpenRouter needs credits before Jev can play.",
         403: "This OpenRouter account cannot access Jev's Decisions API.",
         404: "Jev's model or Decisions endpoint is unavailable.",

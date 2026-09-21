@@ -4,7 +4,7 @@ A Next.js, React, TypeScript and Tailwind chess board where **Jev 1.13, GPT-6 As
 
 ## Run locally
 
-Use Node.js 22.22.3 (`nvm use`), then run these commands inside `code/`:
+Use Node.js 22.22.3 (`nvm use`), then run these commands inside `chess/`:
 
 ```bash
 npm ci
@@ -87,7 +87,7 @@ The same manifest resumes unfinished games without replaying saved decisions. Do
 
 The vertical bar beside the board and the compact evaluation below it use a **separate Stockfish 19 analysis** at skill 20, up to depth 16 / 600 ms per position. Scores are always from White's perspective: `+1.00` favors the chosen model, negative values favor Stockfish, and `M3` denotes a forced mate reported by the engine. The bar's fill is a visual scale, not a win probability. Flipping the board flips the bar's white/black orientation without changing the score perspective. Analysis is never included in any model's input.
 
-Each new run is stored as `data/runs/<uuid>.json` by default, with atomic writes and serial event ordering. Set `CHESS_RUNS_DIR` to an absolute directory to keep logs outside the app checkout. This machine's preview uses the canonical project's `code/data/runs` directory. `/data/` is ignored by Git.
+Each new run is stored as `data/runs/<uuid>.json` by default, with atomic writes and serial event ordering. Set `CHESS_RUNS_DIR` to an absolute directory to keep logs outside the app checkout. This machine's preview uses the canonical project's `chess/data/runs` directory. `/data/` is ignored by Git.
 
 **Run history** lists all saved runs, model and provider, result/status, ply count, evaluation, mean response time and run cost in USD. The controls below the board monitor the active run cost every two seconds, and history refreshes every three seconds. Open **View** for the event log, or download **JSON** / **PGN**. JSON includes starting position, opponent and analysis settings, full model request inputs, legal options, returned choices, actual model IDs, latency, optional confidence, token usage, per-request cost and its source, a persisted run billing summary, moves/PGN, pauses, undo/reset events and errors. Logging begins with this update; earlier unlogged games cannot be reconstructed.
 

@@ -391,11 +391,11 @@ Useful entry points beyond the links above:
 
 Local evidence on the originating machine:
 
-- [Request builder and provider client](D:/workspace/jevvy/code/src/lib/server-jev.ts).
-- [Lookahead enrichment and current decision instruction](D:/workspace/jevvy/code/src/lib/server-lookahead.ts).
-- [Native integration test](D:/workspace/jevvy/code/tests/lookahead.integration.ts).
-- [Project operations and logging reference](D:/workspace/jevvy/code/README.md).
-- [Recorded continuation replay report](D:/workspace/jevvy/code/data/replays/2026-09-19-continuations/report.md).
-- [Audited game log](D:/workspace/jevvy/code/data/runs/90568e58-df29-4eff-aea2-94b593f693db.json).
+- [Request builder and provider client](D:/workspace/jevvy/chess/src/lib/server-jev.ts).
+- [Lookahead enrichment and current decision instruction](D:/workspace/jevvy/chess/src/lib/server-lookahead.ts).
+- [Native integration test](D:/workspace/jevvy/chess/tests/lookahead.integration.ts).
+- [Project operations and logging reference](D:/workspace/jevvy/chess/README.md).
+- [Recorded continuation replay report](D:/workspace/jevvy/chess/data/replays/2026-09-19-continuations/report.md).
+- [Audited game log](D:/workspace/jevvy/chess/data/runs/90568e58-df29-4eff-aea2-94b593f693db.json).
 
 Those final local links will not resolve on another machine. The findings above are included in the guide so it remains useful when copied. Raw run data is intentionally not bundled with the guide.
